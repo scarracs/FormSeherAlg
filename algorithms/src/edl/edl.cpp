@@ -335,8 +335,8 @@ cv::Point EDL::getNextPoint(cv::Point& currentPoint, int mainDirection, cv::Poin
 {
     int nRows;
     int nCols;
-    int row = currentPoint.x;
-    int column = currentPoint.y;
+    int row = currentPoint.y;
+    int column = currentPoint.x;
 
     if (mainDirection == HORIZONTAL)
     {
