@@ -21,7 +21,7 @@
 class EDL : public Algorithm
 {
 public:
-    EDL(int gaussianKernelSize = 3, int minAnchorThreshold = 40, int anchorStepping = 1, int anchorThreshold = 30, double angleTolerance = 20 *  M_PI / 180.0, unsigned int minLineLength = 30);
+    EDL(int gaussianKernelSize = 3, int minAnchorThreshold = 30, int anchorStepping = 1, int anchorThreshold = 40, double angleTolerance = 11.25 *  M_PI / 180.0, unsigned int minLineLength = 30);
     ~EDL();
 
     std::vector<Line> calculate(cv::InputArray _image);

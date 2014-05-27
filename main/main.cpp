@@ -4,32 +4,55 @@
 #include <edl/edl.h>
 #include <line.h>
 #include <iostream>
+#include <time.h>
 
 using namespace std;
 using namespace cv;
 
+double get_time()
+{
+    struct timespec ts;
+    if (clock_gettime (CLOCK_REALTIME, &ts) != 0)
+    puts ("WARNING: Cannot read time using 'clock_gettime'!");
+    return (double) ts.tv_sec + (double) ts.tv_nsec * 1e-9;
+}
+
 int main( int argc, char** argv )
 {
+    double startTime, endTime;
+    int n;
+    int count = 25;
+    EDL *edl = new EDL();
+    std::vector<Line> result;
+
+   // Bild laden (wird nicht mitgemessen)
+
     if(argc < 2)
     {
         std::cout << "Call with path to an image file!" << std::endl;
         return 0;
     }
 
-    cv::Mat input = cv::imread(argv[1]);
+    cv::Mat input = cv::imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
     if(!input.data)
     {
         std::cerr << "Invalid input file. Must be an image!" << std::endl;
         std::cerr << "Could not load image '" << argv[1] << "'!" << std::endl;
         return -1;
     }
-//    cv::Mat image;
-//    cvtColor(input, image, CV_BGR2GRAY );
 
+    // Zeimtessung beginnt
 
-    std::vector<Line> result;
-    EDL *edl = new EDL();
-    result = edl->calculate(input);
+    startTime = get_time();
+    for (n = 0; n < count ; n++)
+    {
+        edl->calculate(input.clone());
+    }
+    endTime = get_time();
+    printf ("\nElapsed time: %.2lf seconds\n\n", (endTime-startTime) / count );
+
+    // Ausgabe des Ergebnisses (wird nicht mitgemessen)
+    result = edl->calculate(input.clone());
 
     cv::RNG rng(0xFFFFFFFF);
     cv::Mat resultImage = cv::Mat::zeros(input.rows, input.cols, CV_8UC3);
