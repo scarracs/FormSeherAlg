@@ -13,12 +13,8 @@
 #include <iostream>
 
 
-EDL::EDL(int sobelKernelSize, double sobelScale, double sobelDelta, int gaussianKernelSize,
-         int minAnchorThreshold, int anchorStepping, int anchorThreshold, double angleTolerance, unsigned int minLineLength)
-    : sobelKernelSize(sobelKernelSize),
-      sobelScale(sobelScale),
-      sobelDelta(sobelDelta),
-      gaussianKernelSize(gaussianKernelSize),
+EDL::EDL(int gaussianKernelSize, int minAnchorThreshold, int anchorStepping, int anchorThreshold, double angleTolerance, unsigned int minLineLength)
+    : gaussianKernelSize(gaussianKernelSize),
       minAnchorThreshold(minAnchorThreshold),
       anchorThreshold(anchorThreshold),
       anchorStepping(anchorStepping),
@@ -60,7 +56,7 @@ std::vector<Line> EDL::calculate(cv::InputArray _image)
     // run the routing algorithm
     // ####
 
-    routeAnchors(angleTolerance, anchors, result);
+    routeAnchors(anchors, result);
 
     // Save result
     return result;
@@ -77,15 +73,12 @@ void EDL::findAnchors(std::vector<cv::Point> &anchors)
     for(int row = 1; row < nRows; ++row)
     {
         uchar* gradMag = gradientMagnitudes.ptr<uchar>(row);
-        short* gradX = dx.ptr<short>(row);
-        short* gradY = dy.ptr<short>(row);
 
-        for(int column = 1; column < nCols; column += anchorStepping)
+        for(int column = 1; column < nCols; column++)
         {
             if ((center = gradMag[column]) > minAnchorThreshold)  // check if the current Point might be an anchor
             {
-                cv::Vec2s vec(gradX[column] ,gradY[column]);
-                direction = getOrientation(vec);
+                direction = getOrientation(*getSobelVector(row, column));
                 if (direction == HORIZONTAL)
                 {
                     if (center - (gradientMagnitudes.at<uchar>(row, column - 1)) >= anchorThreshold && center - (gradientMagnitudes.at<uchar>(row, column + 1) >= anchorThreshold ))
@@ -152,7 +145,7 @@ void EDL::calcGrad()
     }
 }
 
-void EDL::routeAnchors(double angleTolerance, std::vector<cv::Point>& anchorPoints, std::vector<Line> &result)
+void EDL::routeAnchors(std::vector<cv::Point>& anchorPoints, std::vector<Line> &result)
 {
     cv::Mat_<uchar> edgels = cv::Mat::zeros(gradientMagnitudes.rows, gradientMagnitudes.cols, CV_8U);
     std::vector<std::list<cv::Point*>*> lineSegments;
@@ -196,31 +189,33 @@ void EDL::walkFromAnchor(cv::Point& anchorPoint, std::vector<std::list<cv::Point
 {
     //save the results to
     std::list<cv::Point*>* currentLineSegment = new std::list<cv::Point*>;
-    double currentGradientAngle;
-    double lineSegmentAngle;
+    cv::Vec2s *currentLineVector;
 
     // two points to work with
 
     cv::Point *currentPoint = new cv::Point(anchorPoint);
-    cv::Point *nextPoint = new cv::Point(anchorPoint);
+    cv::Point *nextPoint;
+    cv::Vec2s *nextVector;
 
     // Directions to walk to
 
-    cv::Point *left = new cv::Point(0, -1);
-    cv::Point *right = new cv::Point(0, 1);
-    cv::Point *up = new cv::Point(1, 0);
-    cv::Point *down = new cv::Point(-1, 0);
+    // HORIZONTAL
+    cv::Point left = cv::Point(-1, 0);
+    cv::Point right = cv::Point(1, 0);
+
+    // VERTICAL
+    cv::Point up = cv::Point(0, -1);
+    cv::Point down =cv::Point(0, 1);
 
     int mainDirection; // VERTICAL or HORIZONTAL
-    cv::Point *subDirection; // left,rigt or up,down
+    cv::Point subDirection; // left,rigt or up,down
 
     // ####
     // set defaults before we start walking
     // ####
 
     bool stopWalk = false;
-    cv::Vec2s vec(dx.at<short>(*currentPoint), dy.at<short>(*currentPoint));
-    mainDirection = getOrientation(vec);
+    mainDirection = getOrientation(*getSobelVector(*currentPoint));
 
     if (mainDirection == HORIZONTAL)
     {
@@ -232,101 +227,85 @@ void EDL::walkFromAnchor(cv::Point& anchorPoint, std::vector<std::list<cv::Point
         subDirection = up;
     }
 
+    currentLineSegment->push_back(currentPoint);
+    currentLineVector = getSobelVector(*currentPoint);
+    lineSegments.push_back(currentLineSegment);
+
+
     // ####
-    // Start the walking...
+    // start walking
     // ####
 
     do
     {
+        // gimmie the next point
+
+        nextPoint = getNextPoint(*currentPoint, subDirection);
+        nextVector = getSobelVector(*nextPoint);
 
         // ####
-        // Check if a new segment begins
+        // check if the point is worthy
         // ####
 
-        currentGradientAngle = fabs(std::atan2(dx.at<short>(*currentPoint), dy.at<short>(*currentPoint)));
-
-        if (currentLineSegment->empty())
+        if (nextPoint == currentPoint)
         {
-            lineSegmentAngle = currentGradientAngle;
-            currentLineSegment->push_front(currentPoint);
+            stopWalk = true;
         }
         else
         {
-            if(isAligned(lineSegmentAngle, currentGradientAngle, angleTolerance))
+            //still same orientation and still usefull grad?
+            if (mainDirection == getOrientation(*nextVector)
+                    && gradientMagnitudes.at<uchar>(*nextPoint) > 0)
             {
-                if(subDirection == left || subDirection == up)
+                // check if the angle is in tolerance
+                if(getAngleBetweenVectors(*currentLineVector, *nextVector) <= angleTolerance)
                 {
-                    currentLineSegment->push_front(currentPoint);
+                    if(subDirection == left || subDirection == up)
+                    {
+                        currentLineSegment->push_front(nextPoint);
+                    }
+                    else // right || down
+                    {
+                        currentLineSegment->push_back(nextPoint);
+                    }
                 }
-                else
+                else // if the tolerance is exceeded
                 {
-                    currentLineSegment->push_back(currentPoint);
+                    currentLineSegment = new std::list<cv::Point*>;
+                    currentLineSegment->push_back(nextPoint);
+                    currentLineVector = getSobelVector(*nextPoint);
+                    lineSegments.push_back(currentLineSegment);
                 }
+                currentPoint = nextPoint;
             }
             else
             {
-                if(currentLineSegment->size() > 30) // if the line is to small forget about it
-                {
-                 lineSegments.push_back(currentLineSegment);
-                }
-                currentLineSegment = new std::list<cv::Point*>;
+                stopWalk = true;
             }
         }
 
         // ####
-        // Find next point
+        // maybe we wanna swap directions...
         // ####
 
-        nextPoint = getNextPoint(*currentPoint, *subDirection);
-
-        // ####
-        // Perform various checks
-        // ####
-
-        if(gradientMagnitudes.at<uchar>(*nextPoint) <= 0) // if its useless to keep walking into this direction
+        if (stopWalk)
         {
-            if (subDirection == right || subDirection == down) //if both directions already have been walked
-            {
-                stopWalk = true;
-            }
-
             if (subDirection == left) // change from left to right
             {
                 subDirection = right;
                 *currentPoint = anchorPoint;
+                stopWalk = false;
             }
 
             if (subDirection == up) // change from up to down
             {
                 subDirection = down;
                 *currentPoint = anchorPoint;
+                stopWalk = false;
             }
         }
 
-        else  // if we keep walking switch the points
-        {
-            currentPoint = nextPoint;
-        }
-
-        // will the next given point still be there?
-        // TODO: Find better solution
-        if( nextPoint->x+1 >= gradientMagnitudes.cols || nextPoint->y+1 >= gradientMagnitudes.rows || nextPoint->x < 1 || nextPoint->y < 1 )
-        {
-            stopWalk = true;
-        }
     } while(!stopWalk);
-}
-
-bool EDL::getOrientation(cv::Vec2s &v1)
-{
-    bool orientation = VERTICAL;
-
-    if(abs(v1[0]) >= abs(v1[1]))
-    {
-        orientation = HORIZONTAL;
-    }
-    return orientation;
-
 }
 
 cv::Point* EDL::getNextPoint(cv::Point& currentPoint, cv::Point& direction)
@@ -366,7 +345,7 @@ cv::Point* EDL::getNextPoint(cv::Point& currentPoint, cv::Point& direction)
             curCol = startColumn + j;
 
             // check if the move is still allowed
-            if (!isOutOfBounds(curCol, curRow))
+            if (!isOutOfBounds(curRow,curCol))
             {
                 // check if mag is larger
                 if (currentMag < gradMag[curCol])
@@ -380,16 +359,6 @@ cv::Point* EDL::getNextPoint(cv::Point& currentPoint, cv::Point& direction)
     return nextPoint;
 }
 
-bool EDL::isAligned(double compare, double angle, double tolerance)
-{
-    if(compare >= M_PI)
-        compare -= M_PI;
-    if(angle >= M_PI)
-        angle -= M_PI;
-
-    return ((angle - compare) <= tolerance) && ((angle - compare) >= -tolerance);
-}
-
 bool EDL::isOutOfBounds(cv::Point &point)
 {
     return (point.x < 0) || (point.x > gradientMagnitudes.cols)
@@ -400,6 +369,28 @@ bool EDL::isOutOfBounds(int x, int y)
 {
     return (x < 0) || (x > gradientMagnitudes.cols)
             || (y < 0) || (y > gradientMagnitudes.rows);
+}
+
+cv::Vec2s* EDL::getSobelVector(cv::Point &point)
+{
+    return new cv::Vec2s(dx.at<short>(point), dy.at<short>(point));
+}
+
+cv::Vec2s* EDL::getSobelVector(int x, int y)
+{
+    return new cv::Vec2s(dx.at<short>(x, y), dy.at<short>(x, y));
+}
+
+bool EDL::getOrientation(cv::Vec2s &v1)
+{
+    bool orientation = VERTICAL;
+
+    if(abs(v1[0]) >= abs(v1[1]))
+    {
+        orientation = HORIZONTAL;
+    }
+    return orientation;
+
 }
 
 double EDL::getAngleBetweenVectors(cv::Vec2s &v1, cv::Vec2s &v2)

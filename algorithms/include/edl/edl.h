@@ -21,8 +21,7 @@
 class EDL : public Algorithm
 {
 public:
-    EDL(int sobelKernelSize = 3, double sobelScale = 1.9, double sobelDelta = 0.0, int gaussianKernelSize = 3,
-        int minAnchorThreshold = 30, int anchorStepping = 1, int anchorThreshold = 40, double angleTolerance = 22.5 *  M_PI / 180.0, unsigned int minLineLength = 30);
+    EDL(int gaussianKernelSize = 3, int minAnchorThreshold = 40, int anchorStepping = 1, int anchorThreshold = 30, double angleTolerance = 20 *  M_PI / 180.0, unsigned int minLineLength = 30);
     ~EDL();
 
     std::vector<Line> calculate(cv::InputArray _image);
@@ -32,7 +31,7 @@ private:
 
     void findAnchors(std::vector<cv::Point> &anchors);
 
-    void routeAnchors(double angleTolerance, std::vector<cv::Point>& anchorPoints, std::vector<Line> &result);
+    void routeAnchors(std::vector<cv::Point>& anchorPoints, std::vector<Line> &result);
 
     void walkFromAnchor(cv::Point& anchorPoint, std::vector<std::list<cv::Point*>*>& lineSegments);
 
@@ -40,17 +39,16 @@ private:
 
     cv::Point* getNextPoint(cv::Point& currentPoint, cv::Point& subDirection);
 
-    bool isAligned(double compare, double angle, double tolerance);
-
     bool isOutOfBounds(cv::Point &point);
 
     bool isOutOfBounds(int x, int y);
 
+    cv::Vec2s* getSobelVector(cv::Point &point);
+
+    cv::Vec2s* getSobelVector(int x, int y);
+
     double getAngleBetweenVectors(cv::Vec2s &v1, cv::Vec2s &v2);
 
-    int sobelKernelSize;
-    double sobelScale;
-    double sobelDelta;
     int gaussianKernelSize;
     int anchorThreshold;
     double angleTolerance;
