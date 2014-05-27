@@ -133,15 +133,17 @@ private slots:
             cv::Point *down = new cv::Point(0, -1);
             // start/end
             cv::Point *currentPoint = new cv::Point(1, 1);
-            cv::Point *nextPoint;
+            cv::Point nextPoint;
+
             // test 1
             cv::Mat_<uchar> gradientMagnitudes = (cv::Mat_<uchar>(3,3) <<        1        ,2      ,3
                                                                                 ,11       ,255    ,13
                                                                                 ,21       ,40     ,80); //walk over this
             edl->gradientMagnitudes = gradientMagnitudes;
-            *nextPoint = edl->getNextPoint(*currentPoint, HORIZONTAL, *down);
-            std::cout << *nextPoint << std::endl;
-            QVERIFY(gradientMagnitudes(*nextPoint) == 80);
+            nextPoint = edl->getNextPoint(*currentPoint, HORIZONTAL, *right);
+            std::cout << nextPoint << (int)gradientMagnitudes(nextPoint) << std::endl;
+            QVERIFY(gradientMagnitudes(nextPoint) == 80);
+
         }
 
 //    void findNextPointTest()
@@ -190,43 +192,43 @@ private slots:
 //        delete nextPoint;
 //    }
 
-    void isAlignedTest()
-    {
-        double angleTolerance = 21.5 * M_PI / 180.0d;
+//    void isAlignedTest()
+//    {
+//        double angleTolerance = 21.5 * M_PI / 180.0d;
 
-        // test aligned
-        QVERIFY(true  == edl->isAligned( 0,   0, angleTolerance));
-        QVERIFY(true  == edl->isAligned( 21.5 * M_PI / 180.0d, 0, angleTolerance));
-        QVERIFY(true  == edl->isAligned(180 * M_PI / 180.0d,  0, angleTolerance));
-        QVERIFY(true  == edl->isAligned(90 * M_PI / 180.0d,  270 * M_PI / 180.0d, angleTolerance));
-        // Test not aligned
-        QVERIFY(false == edl->isAligned( 22 * M_PI / 180.0d,   0, angleTolerance));
-        QVERIFY(false == edl->isAligned( 45 * M_PI / 180.0d, 23 * M_PI / 180.0d, angleTolerance));
-        QVERIFY(false == edl->isAligned(100 * M_PI / 180.0d, 200 * M_PI / 180.0d, angleTolerance));
-    }
+//        // test aligned
+//        QVERIFY(true  == edl->isAligned( 0,   0, angleTolerance));
+//        QVERIFY(true  == edl->isAligned( 21.5 * M_PI / 180.0d, 0, angleTolerance));
+//        QVERIFY(true  == edl->isAligned(180 * M_PI / 180.0d,  0, angleTolerance));
+//        QVERIFY(true  == edl->isAligned(90 * M_PI / 180.0d,  270 * M_PI / 180.0d, angleTolerance));
+//        // Test not aligned
+//        QVERIFY(false == edl->isAligned( 22 * M_PI / 180.0d,   0, angleTolerance));
+//        QVERIFY(false == edl->isAligned( 45 * M_PI / 180.0d, 23 * M_PI / 180.0d, angleTolerance));
+//        QVERIFY(false == edl->isAligned(100 * M_PI / 180.0d, 200 * M_PI / 180.0d, angleTolerance));
+//    }
 
-    void isOutOfBoundsTest()
-    {
-        cv::Mat mat = cv::Mat::zeros(2, 2, CV_8U);
+//    void isOutOfBoundsTest()
+//    {
+//        cv::Mat mat = cv::Mat::zeros(2, 2, CV_8U);
 
-        cv::Point point(-1, 0);
-        QVERIFY(true == edl->isOutOfBounds(&point, mat));
+//        cv::Point point(-1, 0);
+//        QVERIFY(true == edl->isOutOfBounds(&point, mat));
 
-        point = cv::Point(0, 0);
-        QVERIFY(false == edl->isOutOfBounds(&point, mat));
+//        point = cv::Point(0, 0);
+//        QVERIFY(false == edl->isOutOfBounds(&point, mat));
 
-        point = cv::Point(2, 2);
-        QVERIFY(false == edl->isOutOfBounds(&point, mat));
+//        point = cv::Point(2, 2);
+//        QVERIFY(false == edl->isOutOfBounds(&point, mat));
 
-        point = cv::Point(2, 3);
-        QVERIFY(true == edl->isOutOfBounds(&point, mat));
+//        point = cv::Point(2, 3);
+//        QVERIFY(true == edl->isOutOfBounds(&point, mat));
 
-        point = cv::Point(3, 2);
-        QVERIFY(true == edl->isOutOfBounds(&point, mat));
+//        point = cv::Point(3, 2);
+//        QVERIFY(true == edl->isOutOfBounds(&point, mat));
 
-        point= cv::Point(1, -1);
-        QVERIFY(true == edl->isOutOfBounds(&point, mat));
-    }
+//        point= cv::Point(1, -1);
+//        QVERIFY(true == edl->isOutOfBounds(&point, mat));
+//    }
 
     void cleanupTestCase()
     {

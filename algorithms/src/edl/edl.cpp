@@ -136,8 +136,6 @@ void EDL::calcGrad()
 
         for(int column = 1; column < nCols; ++column)
         {
-            uchar test = image.at<uchar>(cv::Point(1,1));
-            std::cout << test;
             Gx =    (sobelX[0][0] * image.at<uchar>(row-1, column-1)) + (sobelX[0][1] * image.at<uchar>(row, column-1)) + (sobelX[0][2] * image.at<uchar>(row+1,column-1)) +
                     (sobelX[1][0] * image.at<uchar>(row-1, column))   + (sobelX[1][1] * image.at<uchar>(row, column))   + (sobelX[1][2] * image.at<uchar>(row+1,column)) +
                     (sobelX[2][0] * image.at<uchar>(row-1, column+1)) + (sobelX[2][1] * image.at<uchar>(row, column+1)) + (sobelX[2][2] * image.at<uchar>(row+1,column+1));
@@ -335,37 +333,39 @@ cv::Point EDL::getNextPoint(cv::Point& currentPoint, int mainDirection, cv::Poin
 {
     int nRows;
     int nCols;
-    int row = currentPoint.y;
-    int column = currentPoint.x;
+    int startRow = currentPoint.y;
+    int startColumn = currentPoint.x;
 
     if (mainDirection == HORIZONTAL)
     {
-        row -= 1;
-        column += subDirection.x;
-        nRows = 1;
-        nCols = 3;
+        startRow -= 1;
+        startColumn += subDirection.x;
+        nRows = 3;
+        nCols = 1;
     }
     else // VERTICAL
     {
-        row += subDirection.y;
-        column -= 1;
-        nRows = 3;
-        nCols = 1;
+        startRow += subDirection.y;
+        startColumn -= 1;
+        nRows = 1;
+        nCols = 3;
     }
 
     cv::Point nextPoint;
     uchar currentMag = 0;
+    uchar debugmag = 0 ;
 
-    for(; row < nRows; row++)
+    for(int i = 0 ; i < nRows; ++i)
     {
-        uchar *gradMag = gradientMagnitudes.ptr<uchar>(row);
+        uchar *gradMag = gradientMagnitudes.ptr<uchar>(startRow + i);
 
-        for(; column < nCols; column++)
+        for(int j = 0 ; j < nCols; ++j)
         {
-            if (currentMag < gradMag[column])
+            debugmag = gradMag[startColumn + j];
+            if (currentMag < gradMag[startColumn + j])
             {
-                currentMag = gradMag[column];
-                nextPoint = cv::Point(column, row);
+                currentMag = gradMag[startColumn + j];
+                nextPoint = cv::Point(startColumn + j, startRow + i);
             }
         }
     }
