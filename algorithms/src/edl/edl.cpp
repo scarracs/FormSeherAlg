@@ -277,7 +277,7 @@ void EDL::walkFromAnchor(cv::Point& anchorPoint, std::vector<std::list<cv::Point
         // Find next point
         // ####
 
-        *nextPoint = getNextPoint(*currentPoint, mainDirection, *subDirection);
+        nextPoint = getNextPoint(*currentPoint, *subDirection);
 
         // ####
         // Perform various checks
@@ -329,43 +329,51 @@ bool EDL::getOrientation(cv::Vec2s &v1)
 
 }
 
-cv::Point EDL::getNextPoint(cv::Point& currentPoint, int mainDirection, cv::Point& subDirection)
+cv::Point* EDL::getNextPoint(cv::Point& currentPoint, cv::Point& direction)
 {
     int nRows;
     int nCols;
     int startRow = currentPoint.y;
     int startColumn = currentPoint.x;
+    int curRow;
+    int curCol;
 
-    if (mainDirection == HORIZONTAL)
+    if (direction.y == 0) // HORIZONTAL
     {
         startRow -= 1;
-        startColumn += subDirection.x;
+        startColumn += direction.x;
         nRows = 3;
         nCols = 1;
     }
-    else // VERTICAL
+    if (direction.x == 0) // VERTICAL
     {
-        startRow += subDirection.y;
+        startRow += direction.y;
         startColumn -= 1;
         nRows = 1;
         nCols = 3;
     }
 
-    cv::Point nextPoint;
+    cv::Point* nextPoint = &currentPoint; //return the currentPoint if no nextPoint could be found
     uchar currentMag = 0;
-    uchar debugmag = 0 ;
 
     for(int i = 0 ; i < nRows; ++i)
     {
-        uchar *gradMag = gradientMagnitudes.ptr<uchar>(startRow + i);
+        curRow = startRow + i;
+        uchar *gradMag = gradientMagnitudes.ptr<uchar>(curRow);
 
         for(int j = 0 ; j < nCols; ++j)
         {
-            debugmag = gradMag[startColumn + j];
-            if (currentMag < gradMag[startColumn + j])
+            curCol = startColumn + j;
+
+            // check if the move is still allowed
+            if (!isOutOfBounds(curCol, curRow))
             {
-                currentMag = gradMag[startColumn + j];
-                nextPoint = cv::Point(startColumn + j, startRow + i);
+                // check if mag is larger
+                if (currentMag < gradMag[curCol])
+                {
+                    currentMag = gradMag[curCol];
+                    nextPoint = new cv::Point(curCol, curRow);
+                }
             }
         }
     }
@@ -382,10 +390,16 @@ bool EDL::isAligned(double compare, double angle, double tolerance)
     return ((angle - compare) <= tolerance) && ((angle - compare) >= -tolerance);
 }
 
-bool EDL::isOutOfBounds(cv::Point *point)
+bool EDL::isOutOfBounds(cv::Point &point)
 {
-    return (point->x < 0) || (point->x > gradientMagnitudes.cols)
-            || (point->y < 0) || (point->y > gradientMagnitudes.rows);
+    return (point.x < 0) || (point.x > gradientMagnitudes.cols)
+            || (point.y < 0) || (point.y > gradientMagnitudes.rows);
+}
+
+bool EDL::isOutOfBounds(int x, int y)
+{
+    return (x < 0) || (x > gradientMagnitudes.cols)
+            || (y < 0) || (y > gradientMagnitudes.rows);
 }
 
 double EDL::getAngleBetweenVectors(cv::Vec2s &v1, cv::Vec2s &v2)

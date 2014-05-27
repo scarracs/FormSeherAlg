@@ -38,11 +38,13 @@ private:
 
     bool getOrientation(cv::Vec2s &v1);
 
-    cv::Point getNextPoint(cv::Point& currentPoint, int mainDirection, cv::Point& subDirection);
+    cv::Point* getNextPoint(cv::Point& currentPoint, cv::Point& subDirection);
 
     bool isAligned(double compare, double angle, double tolerance);
 
-    bool isOutOfBounds(cv::Point *point);
+    bool isOutOfBounds(cv::Point &point);
+
+    bool isOutOfBounds(int x, int y);
 
     double getAngleBetweenVectors(cv::Vec2s &v1, cv::Vec2s &v2);
 

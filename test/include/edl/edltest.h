@@ -129,21 +129,42 @@ private slots:
             cv::Point *left = new cv::Point(-1, 0);
             cv::Point *right = new cv::Point(1, 0);
             // VERTICAL
-            cv::Point *up = new cv::Point(0, 1);
-            cv::Point *down = new cv::Point(0, -1);
+            cv::Point *up = new cv::Point(0, -1);
+            cv::Point *down = new cv::Point(0, 1);
             // start/end
             cv::Point *currentPoint = new cv::Point(1, 1);
-            cv::Point nextPoint;
+            cv::Point *nextPoint;
 
-            // test 1
-            cv::Mat_<uchar> gradientMagnitudes = (cv::Mat_<uchar>(3,3) <<        1        ,2      ,3
-                                                                                ,11       ,255    ,13
-                                                                                ,21       ,40     ,80); //walk over this
+
+            cv::Mat_<uchar> gradientMagnitudes = (cv::Mat_<uchar>(5,4) <<        1        ,2      ,3    ,4
+                                                                                ,11       ,255    ,13   ,14
+                                                                                ,21       ,22     ,80   ,15
+                                                                                ,31       ,32     ,33   ,16
+                                                                                ,41       ,42     ,43   ,17
+                                                                                ,51       ,52     ,53   ,18); //walk over this
             edl->gradientMagnitudes = gradientMagnitudes;
-            nextPoint = edl->getNextPoint(*currentPoint, HORIZONTAL, *right);
-            std::cout << nextPoint << (int)gradientMagnitudes(nextPoint) << std::endl;
-            QVERIFY(gradientMagnitudes(nextPoint) == 80);
 
+            //simple walk
+            nextPoint = edl->getNextPoint(*currentPoint, *right);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 80);
+            nextPoint = edl->getNextPoint(*currentPoint, *left);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 21);
+            nextPoint = edl->getNextPoint(*currentPoint, *up);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 3);
+            nextPoint = edl->getNextPoint(*currentPoint, *down);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 80);
+
+            //corner walk!
+            currentPoint = new cv::Point(0, 3);
+
+            nextPoint = edl->getNextPoint(*currentPoint, *right);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 42);
+            nextPoint = edl->getNextPoint(*currentPoint, *left);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 31);
+            nextPoint = edl->getNextPoint(*currentPoint, *up);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 22);
+            nextPoint = edl->getNextPoint(*currentPoint, *down);
+            QVERIFY(gradientMagnitudes(*nextPoint) == 42);
         }
 
 //    void findNextPointTest()
