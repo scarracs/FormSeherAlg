@@ -137,7 +137,7 @@ void EDL::calcGrad()
                     (sobelY[1][0] * image.at<uchar>(row-1, column))   + (sobelY[1][1] * image.at<uchar>(row, column))   + (sobelY[1][2] * image.at<uchar>(row+1,column)) +
                     (sobelY[2][0] * image.at<uchar>(row-1, column+1)) + (sobelY[2][1] * image.at<uchar>(row, column+1)) + (sobelY[2][2] * image.at<uchar>(row+1,column+1));
 
-            gradientMagnitude = std::sqrt(Gx*Gx + Gy*Gy);
+            gradientMagnitude = math::sqrtFast(Gx*Gx + Gy*Gy);
             gradMag[column] = gradientMagnitude;
             gradDx[column] = Gx;
             gradDy[column] = Gy;
