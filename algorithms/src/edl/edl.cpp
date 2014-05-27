@@ -42,9 +42,9 @@ std::vector<Line> EDL::calculate(cv::InputArray _image)
     // ####
     // use a filter algorithm to suppress noise
     // ####
-
-    cv::GaussianBlur(image, image, cv::Size(gaussianKernelSize, gaussianKernelSize), 0, 0);
-
+    cv::Mat blur;
+    cv::GaussianBlur(image, blur, cv::Size(gaussianKernelSize, gaussianKernelSize), 0, 0);
+    image = blur;
     // ####
     // create gradient and direction output including the anchorpoints
     // ####
@@ -70,11 +70,11 @@ void EDL::findAnchors(std::vector<cv::Point> &anchors)
     int nCols = gradientMagnitudes.cols-1;
     short center;
 
-    for(int row = 1; row < nRows; ++row)
+    for(int row = 1; row < nRows; row += anchorStepping)
     {
         uchar* gradMag = gradientMagnitudes.ptr<uchar>(row);
 
-        for(int column = 1; column < nCols; column++)
+        for(int column = 1; column < nCols; column += anchorStepping)
         {
             if ((center = gradMag[column]) > minAnchorThreshold)  // check if the current Point might be an anchor
             {
@@ -137,7 +137,7 @@ void EDL::calcGrad()
                     (sobelY[1][0] * image.at<uchar>(row-1, column))   + (sobelY[1][1] * image.at<uchar>(row, column))   + (sobelY[1][2] * image.at<uchar>(row+1,column)) +
                     (sobelY[2][0] * image.at<uchar>(row-1, column+1)) + (sobelY[2][1] * image.at<uchar>(row, column+1)) + (sobelY[2][2] * image.at<uchar>(row+1,column+1));
 
-            gradientMagnitude = math::sqrtFast(Gx*Gx + Gy*Gy);
+            gradientMagnitude = std::sqrt(Gx*Gx + Gy*Gy);
             gradMag[column] = gradientMagnitude;
             gradDx[column] = Gx;
             gradDy[column] = Gy;
@@ -147,18 +147,11 @@ void EDL::calcGrad()
 
 void EDL::routeAnchors(std::vector<cv::Point>& anchorPoints, std::vector<Line> &result)
 {
-    cv::Mat_<uchar> edgels = cv::Mat::zeros(gradientMagnitudes.rows, gradientMagnitudes.cols, CV_8U);
     std::vector<std::list<cv::Point*>*> lineSegments;
 
     // Iterate all anchor points
     for(auto anchorPoint : anchorPoints)
     {
-        // Is the pixel already part of an edge?
-        if(edgels(anchorPoint) != 0)
-        {
-            continue;
-        }
-
         walkFromAnchor(anchorPoint, lineSegments);
     }
 

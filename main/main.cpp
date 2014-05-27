@@ -21,7 +21,7 @@ int main( int argc, char** argv )
 {
     double startTime, endTime;
     int n;
-    int count = 25;
+    int count = 100;
     EDL *edl = new EDL();
     std::vector<Line> result;
 
@@ -46,13 +46,14 @@ int main( int argc, char** argv )
     startTime = get_time();
     for (n = 0; n < count ; n++)
     {
-        edl->calculate(input.clone());
+        edl->calculate(input);
     }
     endTime = get_time();
-    printf ("\nElapsed time: %.2lf seconds\n\n", (endTime-startTime) / count );
+    printf ("\nElapsed time: %.2lf seconds\n\n", (endTime-startTime) / count);
 
     // Ausgabe des Ergebnisses (wird nicht mitgemessen)
-    result = edl->calculate(input.clone());
+
+    result = edl->calculate(input);
 
     cv::RNG rng(0xFFFFFFFF);
     cv::Mat resultImage = cv::Mat::zeros(input.rows, input.cols, CV_8UC3);
